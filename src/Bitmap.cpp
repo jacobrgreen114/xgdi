@@ -4,7 +4,6 @@
 
 #include "muchcool/xgdi/Bitmap.hpp"
 
-// #define IL_STATIC_LIB 1
 #include "IL/il.h"
 #include "IL/ilu.h"
 
@@ -25,8 +24,10 @@ Bitmap::Bitmap(rndr::GraphicsContext *context, const char *filePath)
   ilBindImage(image);
 
   auto imageLoaded = ilLoadImage(filePath);
-  if (!imageLoaded)
-    throw std::exception();
+  if (imageLoaded == IL_FALSE) {
+    const char *msg = iluErrorString(ilGetError());
+    throw std::exception(msg);
+  }
 
   imageLoaded = ilConvertImage(IL_RGBA, IL_UNSIGNED_BYTE);
   if (imageLoaded == IL_FALSE)
