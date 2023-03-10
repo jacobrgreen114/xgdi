@@ -1,38 +1,37 @@
 
 
-// Copyright (c) 2022-2023 Jacob R. Green
+// Copyright (c) 2023 Jacob R. Green
 // All Rights Reserved.
 
 #include "muchcool/xgdi/DrawingContext.hpp"
 
+#include "src/shader/rect.vert.spv.hpp"
+#include "src/shader/rect.frag.spv.hpp"
+
+#include "src/shader/roundrect.vert.spv.hpp"
+#include "src/shader/roundrect.frag.spv.hpp"
+
+#include "src/shader/glyph.vert.spv.hpp"
+#include "src/shader/glyph.frag.spv.hpp"
+
+#include "src/shader/bitmap.vert.spv.hpp"
+#include "src/shader/bitmap.frag.spv.hpp"
+
 #define MAX_DESCRIPTOR_COUNT 1024
-
-const char *const rectVertShaderPath = "Shaders/RectVertShader.spv";
-const char *const rectFragShaderPath = "Shaders/RectFragShader.spv";
-
-const char *const roundRectVertShaderPath = "Shaders/RoundRectVertShader.spv";
-const char *const roundRectFragShaderPath = "Shaders/RoundRectFragShader.spv";
-
-const char *const glyphVertShaderPath = "Shaders/GlyphVertShader.spv";
-const char *const glyphFragShaderPath = "Shaders/GlyphFragShader.spv";
-
-const char *const bitmapVertShaderPath = "Shaders/BitmapVertShader.spv";
-const char *const bitmapFragShaderPath = "Shaders/BitmapFragShader.spv";
 
 namespace xgdi {
 
-rndr::GraphicsPipeline *CreatePipeline(rndr::RenderSurface *renderSurface,
-                                       rndr::PipelineLayout *layout,
-                                       const char *vertexShaderPath,
-                                       const char *fragmentShaderPath) {
-  auto &graphicsContext = renderSurface->GetGraphicsContext();
-  auto &renderPass = renderSurface->GetRenderPass();
+rndr::GraphicsPipeline* CreatePipeline(
+    rndr::RenderSurface* renderSurface, rndr::PipelineLayout* layout,
+    std::span<const uint8> vertexShaderData,
+    std::span<const uint8> fragmentShaderData) {
+  auto& graphicsContext = renderSurface->GetGraphicsContext();
+  auto& renderPass = renderSurface->GetRenderPass();
 
-  auto vertexShader =
-      rndr::Shader::LoadFromFile(graphicsContext, vertexShaderPath);
+  auto vertexShader = rndr::Shader::FromData(graphicsContext, vertexShaderData);
 
   auto fragmentShader =
-      rndr::Shader::LoadFromFile(graphicsContext, fragmentShaderPath);
+      rndr::Shader::FromData(graphicsContext, fragmentShaderData);
 
   auto pipeline =
       new rndr::GraphicsPipeline(graphicsContext, renderPass, layout,
@@ -41,39 +40,55 @@ rndr::GraphicsPipeline *CreatePipeline(rndr::RenderSurface *renderSurface,
   return pipeline;
 }
 
-rndr::GraphicsPipeline *
-CreateRectanglePipeline(rndr::RenderSurface *renderSurface,
-                        rndr::PipelineLayout *layout) {
-  return CreatePipeline(renderSurface, layout, rectVertShaderPath,
-                        rectFragShaderPath);
+// rndr::GraphicsPipeline* CreatePipeline(rndr::RenderSurface* renderSurface,
+//                                        rndr::PipelineLayout* layout,
+//                                        const char* vertexShaderPath,
+//                                        const char* fragmentShaderPath) {
+//   auto& graphicsContext = renderSurface->GetGraphicsContext();
+//   auto& renderPass = renderSurface->GetRenderPass();
+//
+//   auto vertexShader =
+//       rndr::Shader::LoadFromFile(graphicsContext, vertexShaderPath);
+//
+//   auto fragmentShader =
+//       rndr::Shader::LoadFromFile(graphicsContext, fragmentShaderPath);
+//
+//   auto pipeline =
+//       new rndr::GraphicsPipeline(graphicsContext, renderPass, layout,
+//                                  vertexShader, fragmentShader, {}, {});
+//
+//   return pipeline;
+// }
+
+rndr::GraphicsPipeline* CreateRectanglePipeline(
+    rndr::RenderSurface* renderSurface, rndr::PipelineLayout* layout) {
+  return CreatePipeline(renderSurface, layout, rect_vert_spv, rect_frag_spv);
 }
 
-rndr::GraphicsPipeline *
-CreateRoundRectPipeline(rndr::RenderSurface *renderSurface,
-                        rndr::PipelineLayout *layout) {
-  return CreatePipeline(renderSurface, layout, roundRectVertShaderPath,
-                        roundRectFragShaderPath);
+rndr::GraphicsPipeline* CreateRoundRectPipeline(
+    rndr::RenderSurface* renderSurface, rndr::PipelineLayout* layout) {
+  return CreatePipeline(renderSurface, layout, roundrect_vert_spv,
+                        roundrect_frag_spv);
 }
 
-rndr::GraphicsPipeline *CreateGlyphPipeline(rndr::RenderSurface *renderSurface,
-                                            rndr::PipelineLayout *layout) {
-  return CreatePipeline(renderSurface, layout, glyphVertShaderPath,
-                        glyphFragShaderPath);
+rndr::GraphicsPipeline* CreateGlyphPipeline(rndr::RenderSurface* renderSurface,
+                                            rndr::PipelineLayout* layout) {
+  return CreatePipeline(renderSurface, layout, glyph_vert_spv, glyph_frag_spv);
 }
 
-rndr::GraphicsPipeline *CreateBitmapPipeline(rndr::RenderSurface *renderSurface,
-                                             rndr::PipelineLayout *layout) {
-  return CreatePipeline(renderSurface, layout, bitmapVertShaderPath,
-                        bitmapFragShaderPath);
+rndr::GraphicsPipeline* CreateBitmapPipeline(rndr::RenderSurface* renderSurface,
+                                             rndr::PipelineLayout* layout) {
+  return CreatePipeline(renderSurface, layout, bitmap_vert_spv,
+                        bitmap_frag_spv);
 }
 
-DrawingContext::DrawingContext(rndr::RenderSurface *surface)
+DrawingContext::DrawingContext(rndr::RenderSurface* surface)
     : _renderSurface(surface), _renderInfo() {
-  auto &graphicsContext = _renderSurface->GetGraphicsContext();
-  auto &device = graphicsContext->GetDevice();
-  auto &frameBuffers = _renderSurface->GetFrameBuffers();
+  auto& graphicsContext = _renderSurface->GetGraphicsContext();
+  auto& device = graphicsContext->GetDevice();
+  auto& frameBuffers = _renderSurface->GetFrameBuffers();
 
-  auto &viewport = _renderSurface->GetViewport();
+  auto& viewport = _renderSurface->GetViewport();
   _renderInfo.Projection =
       glm::ortho(0.0f, viewport.width, 0.0f, viewport.height);
 
@@ -134,8 +149,7 @@ DrawingContext::DrawingContext(rndr::RenderSurface *surface)
 DrawingContext::~DrawingContext() {}
 
 void DrawingContext::Reset() {
-  for (auto commandBuffer : _commandBuffers)
-    commandBuffer.reset();
+  for (auto commandBuffer : _commandBuffers) commandBuffer.reset();
 
   _imageTransitionCommands->operator vk::CommandBuffer().reset();
   _rectUniforms.clear();
@@ -143,9 +157,9 @@ void DrawingContext::Reset() {
 }
 
 void DrawingContext::StartRecording() {
-  auto &renderSurface = *_renderSurface;
-  auto &frameBuffers = renderSurface.GetFrameBuffers();
-  auto &renderPass = renderSurface.GetRenderPass();
+  auto& renderSurface = *_renderSurface;
+  auto& frameBuffers = renderSurface.GetFrameBuffers();
+  auto& renderPass = renderSurface.GetRenderPass();
   auto framebufferSize = renderSurface.GetCurrentExtent();
 
   auto commandxBeginInfo = vk::CommandBufferBeginInfo();
@@ -153,7 +167,7 @@ void DrawingContext::StartRecording() {
       commandxBeginInfo);
 
   for (int i = 0; i < _commandBuffers.size(); ++i) {
-    auto &commandBuffer = _commandBuffers[i];
+    auto& commandBuffer = _commandBuffers[i];
 
     auto commandBeginInfo = vk::CommandBufferBeginInfo();
     commandBuffer.begin(commandBeginInfo);
@@ -187,14 +201,14 @@ void DrawingContext::EndRecording() {
 }
 
 void DrawingContext::Submit() const {
-  auto &renderSurface = *_renderSurface;
-  auto &graphicsContext = *renderSurface.GetGraphicsContext();
-  auto &device = graphicsContext.GetDevice();
-  auto &queue = graphicsContext.GetQueue();
+  auto& renderSurface = *_renderSurface;
+  auto& graphicsContext = *renderSurface.GetGraphicsContext();
+  auto& device = graphicsContext.GetDevice();
+  auto& queue = graphicsContext.GetQueue();
 
-  auto &swapchain = renderSurface.GetSwapchain();
+  auto& swapchain = renderSurface.GetSwapchain();
 
-  auto &inFlightFence = renderSurface.GetInFlightFence();
+  auto& inFlightFence = renderSurface.GetInFlightFence();
 
   auto renderLock = renderSurface.LockRenderMutex();
 
@@ -205,7 +219,7 @@ void DrawingContext::Submit() const {
     vk::throwResultException(result, "failed to acquire next frame.");
   }
 
-  auto &commandBuffer = _commandBuffers[nextImageIndex];
+  auto& commandBuffer = _commandBuffers[nextImageIndex];
 
   auto commandBuffers = std::array<vk::CommandBuffer, 2>{
       *_imageTransitionCommands, commandBuffer};
@@ -238,15 +252,15 @@ void DrawingContext::Submit() const {
   device.resetFences(inFlightFence);
 }
 
-glm::mat4 ModelProjection(const Rect &rect, float rotation = 0.0f) {
+glm::mat4 ModelProjection(const Rect& rect, float rotation = 0.0f) {
   return glm::translate(glm::vec3(rect.Offset, 0.0f)) *
          glm::rotate(rotation, glm::vec3(0.0f, 0.0f, 1.0f)) *
          glm::scale(glm::vec3(rect.Size, 0.0f));
 }
 
-void DrawingContext::DrawRectangle(const Rect &rect, const Color &color) {
-  auto &graphicsContext = _renderSurface->GetGraphicsContext();
-  auto &viewport = _renderSurface->GetViewport();
+void DrawingContext::DrawRectangle(const Rect& rect, const Color& color) {
+  auto& graphicsContext = _renderSurface->GetGraphicsContext();
+  auto& viewport = _renderSurface->GetViewport();
 
   auto transformInfo =
       _RectangleInfo{.Model = ModelProjection(rect), .Color = color};
@@ -273,8 +287,8 @@ void DrawingContext::DrawRectangle(const Rect &rect, const Color &color) {
   }
 }
 
-void DrawingContext::DrawLine(const Point &start, const Point &end,
-                              const Color &color, float thickness) {
+void DrawingContext::DrawLine(const Point& start, const Point& end,
+                              const Color& color, float thickness) {
   auto width = glm::length(end - start);
   auto rect = Rect{start, {width, thickness}};
 
@@ -285,8 +299,8 @@ void DrawingContext::DrawLine(const Point &start, const Point &end,
   DrawRectangle(roundRectInfo);
 }
 
-void DrawingContext::DrawRectangle(const Rect &rect, const Size &radius,
-                                   const Color &fill, const Color &stroke,
+void DrawingContext::DrawRectangle(const Rect& rect, const Size& radius,
+                                   const Color& fill, const Color& stroke,
                                    float strokeThickness) {
   auto roundRectInfo =
       _RoundRectInfo{.Model = ModelProjection(rect),
@@ -299,9 +313,9 @@ void DrawingContext::DrawRectangle(const Rect &rect, const Size &radius,
   DrawRectangle(roundRectInfo);
 }
 
-void DrawingContext::DrawRectangle(const _RoundRectInfo &roundRectInfo) {
-  auto &graphicsContext = _renderSurface->GetGraphicsContext();
-  auto &viewport = _renderSurface->GetViewport();
+void DrawingContext::DrawRectangle(const _RoundRectInfo& roundRectInfo) {
+  auto& graphicsContext = _renderSurface->GetGraphicsContext();
+  auto& viewport = _renderSurface->GetViewport();
 
   auto uniformBuffer =
       new RoundRectUniformBuffer(graphicsContext, roundRectInfo);
@@ -314,7 +328,7 @@ void DrawingContext::DrawRectangle(const _RoundRectInfo &roundRectInfo) {
   auto transformDescriptorSets =
       std::array<vk::DescriptorSet, 1>{*descriptorSet};
 
-  for (auto &commandBuffer : _commandBuffers) {
+  for (auto& commandBuffer : _commandBuffers) {
     commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics,
                                *_roundRectPipeline);
 
@@ -327,37 +341,35 @@ void DrawingContext::DrawRectangle(const _RoundRectInfo &roundRectInfo) {
 }
 
 void DrawingContext::DrawCustom(DrawCustomCallback callback) {
-  for (auto &commandBuffer : _commandBuffers)
-    callback(commandBuffer);
+  for (auto& commandBuffer : _commandBuffers) callback(commandBuffer);
 }
 
 bool isControlChar(char16_t c) { return c <= 0x1F; }
 
-void DrawingContext::DrawFormattedText(const Point &point, FormattedText *text,
-                                       const Color &color) {
-  auto &font = text->GetFont();
+void DrawingContext::DrawFormattedText(const Point& point, FormattedText* text,
+                                       const Color& color) {
+  auto& font = text->GetFont();
 
-  auto p = glm::round(point); // Keeps text pixel aligned
+  auto p = glm::round(point);  // Keeps text pixel aligned
 
   for (auto c : text->GetText()) {
     if (!isControlChar(c)) {
-      auto &glyph = font->GetGlyph(c);
-      if (glyph.GetTexture())
-        DrawGlyph(p, glyph, color);
+      auto& glyph = font->GetGlyph(c);
+      if (glyph.GetTexture()) DrawGlyph(p, glyph, color);
       p.x += glyph.GetAdvance();
     } else {
       if (c == '\n') {
-        p.x = point.x; // TODO : Fix text pixel alignment on newline bug
+        p.x = point.x;  // TODO : Fix text pixel alignment on newline bug
         p.y += font->GetLineHeight();
       }
     }
   }
 }
 
-void DrawingContext::DrawGlyph(const Point &point, const Glyph &glyph,
-                               const Color &color) {
-  auto &graphicsContext = _renderSurface->GetGraphicsContext();
-  auto &viewport = _renderSurface->GetViewport();
+void DrawingContext::DrawGlyph(const Point& point, const Glyph& glyph,
+                               const Color& color) {
+  auto& graphicsContext = _renderSurface->GetGraphicsContext();
+  auto& viewport = _renderSurface->GetViewport();
 
   auto p = glm::round(point);
 
@@ -381,8 +393,7 @@ void DrawingContext::DrawGlyph(const Point &point, const Glyph &glyph,
   auto descriptorSets =
       std::array<vk::DescriptorSet, 2>{*descriptorSet, *samplerSet};
 
-  for (auto &commandBuffer : _commandBuffers) {
-
+  for (auto& commandBuffer : _commandBuffers) {
     commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics,
                                *_glyphPipeline);
     commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics,
@@ -393,8 +404,8 @@ void DrawingContext::DrawGlyph(const Point &point, const Glyph &glyph,
   }
 }
 
-void DrawingContext::DrawBitmap(const Rect &rect, const Bitmap *bitmap) {
-  auto &graphicsContext = _renderSurface->GetGraphicsContext();
+void DrawingContext::DrawBitmap(const Rect& rect, const Bitmap* bitmap) {
+  auto& graphicsContext = _renderSurface->GetGraphicsContext();
 
   auto rectInfo =
       _RectangleInfo{.Model = ModelProjection(rect), .Color = Color::White};
@@ -413,8 +424,7 @@ void DrawingContext::DrawBitmap(const Rect &rect, const Bitmap *bitmap) {
   auto descriptorSets =
       std::array<vk::DescriptorSet, 2>{*descriptorSet, *samplerSet};
 
-  for (auto &commandBuffer : _commandBuffers) {
-
+  for (auto& commandBuffer : _commandBuffers) {
     commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics,
                                *_bitmapPipeline);
     commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics,
@@ -425,4 +435,4 @@ void DrawingContext::DrawBitmap(const Rect &rect, const Bitmap *bitmap) {
   }
 }
 
-} // namespace xgdi
+}  // namespace xgdi
