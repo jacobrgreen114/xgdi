@@ -3,7 +3,7 @@
 // Copyright (c) 2023 Jacob R. Green
 // All Rights Reserved.
 
-#include "muchcool/xgdi/DrawingContext.hpp"
+#include "muchcool/xgdi/drawing_context.hpp"
 
 #include "src/shader/rect.vert.spv.hpp"
 #include "src/shader/rect.frag.spv.hpp"
@@ -19,25 +19,22 @@
 
 #define MAX_DESCRIPTOR_COUNT 1024
 
-namespace xgdi {
+namespace muchcool::xgdi {
 
-rndr::GraphicsPipeline* CreatePipeline(
-    rndr::RenderSurface* renderSurface, rndr::PipelineLayout* layout,
-    std::span<const uint8> vertexShaderData,
-    std::span<const uint8> fragmentShaderData) {
-  auto& graphicsContext = renderSurface->GetGraphicsContext();
+Shared<rndr::GraphicsPipeline> CreatePipeline(
+    Shared<rndr::RenderSurface> renderSurface,
+    Shared<rndr::PipelineLayout> layout,
+    ArrayProxy<const uint8> vertexShaderData,
+    ArrayProxy<const uint8> fragmentShaderData) {
+  auto& context = renderSurface->context();
   auto& renderPass = renderSurface->GetRenderPass();
 
-  auto vertexShader = rndr::Shader::FromData(graphicsContext, vertexShaderData);
+  auto vertexShader = rndr::Shader::FromData(context, vertexShaderData);
 
-  auto fragmentShader =
-      rndr::Shader::FromData(graphicsContext, fragmentShaderData);
+  auto fragmentShader = rndr::Shader::FromData(context, fragmentShaderData);
 
-  auto pipeline =
-      new rndr::GraphicsPipeline(graphicsContext, renderPass, layout,
-                                 vertexShader, fragmentShader, {}, {});
-
-  return pipeline;
+  return Shared{new rndr::GraphicsPipeline(
+      context, renderPass, layout, vertexShader, fragmentShader, {}, {})};
 }
 
 // rndr::GraphicsPipeline* CreatePipeline(rndr::RenderSurface* renderSurface,
@@ -60,32 +57,36 @@ rndr::GraphicsPipeline* CreatePipeline(
 //   return pipeline;
 // }
 
-rndr::GraphicsPipeline* CreateRectanglePipeline(
-    rndr::RenderSurface* renderSurface, rndr::PipelineLayout* layout) {
+Shared<rndr::GraphicsPipeline> CreateRectanglePipeline(
+    Shared<rndr::RenderSurface> renderSurface,
+    Shared<rndr::PipelineLayout> layout) {
   return CreatePipeline(renderSurface, layout, rect_vert_spv, rect_frag_spv);
 }
 
-rndr::GraphicsPipeline* CreateRoundRectPipeline(
-    rndr::RenderSurface* renderSurface, rndr::PipelineLayout* layout) {
+Shared<rndr::GraphicsPipeline> CreateRoundRectPipeline(
+    Shared<rndr::RenderSurface> renderSurface,
+    Shared<rndr::PipelineLayout> layout) {
   return CreatePipeline(renderSurface, layout, roundrect_vert_spv,
                         roundrect_frag_spv);
 }
 
-rndr::GraphicsPipeline* CreateGlyphPipeline(rndr::RenderSurface* renderSurface,
-                                            rndr::PipelineLayout* layout) {
+Shared<rndr::GraphicsPipeline> CreateGlyphPipeline(
+    Shared<rndr::RenderSurface> renderSurface,
+    Shared<rndr::PipelineLayout> layout) {
   return CreatePipeline(renderSurface, layout, glyph_vert_spv, glyph_frag_spv);
 }
 
-rndr::GraphicsPipeline* CreateBitmapPipeline(rndr::RenderSurface* renderSurface,
-                                             rndr::PipelineLayout* layout) {
+Shared<rndr::GraphicsPipeline> CreateBitmapPipeline(
+    Shared<rndr::RenderSurface> renderSurface,
+    Shared<rndr::PipelineLayout> layout) {
   return CreatePipeline(renderSurface, layout, bitmap_vert_spv,
                         bitmap_frag_spv);
 }
 
-DrawingContext::DrawingContext(rndr::RenderSurface* surface)
-    : _renderSurface(surface), _renderInfo() {
-  auto& graphicsContext = _renderSurface->GetGraphicsContext();
-  auto& device = graphicsContext->GetDevice();
+DrawingContext::DrawingContext(Shared<rndr::RenderSurface> surface_)
+    : _renderSurface(std::move(surface_)), _renderInfo() {
+  auto& context = _renderSurface->context();
+  auto& device = context->device();
   auto& frameBuffers = _renderSurface->GetFrameBuffers();
 
   auto& viewport = _renderSurface->GetViewport();
@@ -96,26 +97,25 @@ DrawingContext::DrawingContext(rndr::RenderSurface* surface)
                                  glm::vec3(0.0f, -1.0f, 0.0f));
 
   _renderInfoSetLayout = new rndr::DescriptorSetLayout(
-      graphicsContext,
+      context,
       {rndr::DecriptorSetLayoutBinding(0, vk::DescriptorType::eUniformBuffer, 1,
                                        vk::ShaderStageFlagBits::eAll)});
 
   _modelInfoSetLayout = new rndr::DescriptorSetLayout(
-      graphicsContext,
+      context,
       {rndr::DecriptorSetLayoutBinding(0, vk::DescriptorType::eUniformBuffer, 1,
                                        vk::ShaderStageFlagBits::eAll)});
 
   _glyphSetLayout = new rndr::DescriptorSetLayout(
-      graphicsContext, {rndr::DecriptorSetLayoutBinding(
-                           0, vk::DescriptorType::eCombinedImageSampler, 1,
-                           vk::ShaderStageFlagBits::eFragment)});
+      context, {rndr::DecriptorSetLayoutBinding(
+                   0, vk::DescriptorType::eCombinedImageSampler, 1,
+                   vk::ShaderStageFlagBits::eFragment)});
 
   _pipelineLayout = new rndr::PipelineLayout(
-      graphicsContext, {_renderInfoSetLayout, _modelInfoSetLayout});
+      context, {_renderInfoSetLayout, _modelInfoSetLayout});
 
   _sampledPipelineLayout = new rndr::PipelineLayout(
-      graphicsContext,
-      {_renderInfoSetLayout, _modelInfoSetLayout, _glyphSetLayout});
+      context, {_renderInfoSetLayout, _modelInfoSetLayout, _glyphSetLayout});
 
   _rectanglePipeline = CreateRectanglePipeline(_renderSurface, _pipelineLayout);
   _roundRectPipeline = CreateRoundRectPipeline(_renderSurface, _pipelineLayout);
@@ -123,23 +123,22 @@ DrawingContext::DrawingContext(rndr::RenderSurface* surface)
   _bitmapPipeline =
       CreateBitmapPipeline(_renderSurface, _sampledPipelineLayout);
 
-  _commandPool = new rndr::CommandPool(graphicsContext);
+  _commandPool = new rndr::CommandPool(context);
 
   _commandBuffers = _commandPool->AllocateBuffers(frameBuffers.size());
   _imageTransitionCommands = _commandPool->AllocateBuffer();
 
-  _renderInfoUniformBuffer =
-      new RenderUniformBuffer(graphicsContext, _renderInfo);
+  _renderInfoUniformBuffer = new RenderUniformBuffer(context, _renderInfo);
 
   _descriptorPool = new rndr::DescriptorPool(
-      graphicsContext, MAX_DESCRIPTOR_COUNT,
+      context, MAX_DESCRIPTOR_COUNT,
       {rndr::DescriptorPoolSize(vk::DescriptorType::eUniformBuffer,
                                 MAX_DESCRIPTOR_COUNT),
        rndr::DescriptorPoolSize(vk::DescriptorType::eCombinedImageSampler,
                                 MAX_DESCRIPTOR_COUNT)});
 
-  _renderDescriptor = _descriptorPool->Allocate(_renderInfoSetLayout);
-  _renderDescriptor->UpdateUniform(0, _renderInfoUniformBuffer);
+  _renderDescriptor = _descriptorPool->allocate(*_renderInfoSetLayout);
+  _renderDescriptor->update_uniform(0, *_renderInfoUniformBuffer);
 
   auto semaphoreCreateInfo = vk::SemaphoreCreateInfo();
   _imageAvailableSemaphore = device.createSemaphore(semaphoreCreateInfo);
@@ -148,7 +147,7 @@ DrawingContext::DrawingContext(rndr::RenderSurface* surface)
 
 DrawingContext::~DrawingContext() {}
 
-void DrawingContext::Reset() {
+void DrawingContext::reset() {
   for (auto commandBuffer : _commandBuffers) commandBuffer.reset();
 
   _imageTransitionCommands->operator vk::CommandBuffer().reset();
@@ -156,7 +155,7 @@ void DrawingContext::Reset() {
   _roundRectUniforms.clear();
 }
 
-void DrawingContext::StartRecording() {
+void DrawingContext::start_recording() {
   auto& renderSurface = *_renderSurface;
   auto& frameBuffers = renderSurface.GetFrameBuffers();
   auto& renderPass = renderSurface.GetRenderPass();
@@ -192,7 +191,7 @@ void DrawingContext::StartRecording() {
   }
 }
 
-void DrawingContext::EndRecording() {
+void DrawingContext::end_recording() {
   _imageTransitionCommands->operator vk::CommandBuffer().end();
   for (auto commandBuffer : _commandBuffers) {
     commandBuffer.endRenderPass();
@@ -200,11 +199,11 @@ void DrawingContext::EndRecording() {
   }
 }
 
-void DrawingContext::Submit() const {
+void DrawingContext::submit() const {
   auto& renderSurface = *_renderSurface;
-  auto& graphicsContext = *renderSurface.GetGraphicsContext();
-  auto& device = graphicsContext.GetDevice();
-  auto& queue = graphicsContext.GetQueue();
+  auto& context = *renderSurface.context();
+  auto& device = context.device();
+  auto& queue = context.queue();
 
   auto& swapchain = renderSurface.GetSwapchain();
 
@@ -258,8 +257,8 @@ glm::mat4 ModelProjection(const Rect& rect, float rotation = 0.0f) {
          glm::scale(glm::vec3(rect.Size, 0.0f));
 }
 
-void DrawingContext::DrawRectangle(const Rect& rect, const Color& color) {
-  auto& graphicsContext = _renderSurface->GetGraphicsContext();
+void DrawingContext::draw_rectangle(const Rect& rect, const Color& color) {
+  auto& graphicsContext = _renderSurface->context();
   auto& viewport = _renderSurface->GetViewport();
 
   auto transformInfo =
@@ -268,8 +267,8 @@ void DrawingContext::DrawRectangle(const Rect& rect, const Color& color) {
   auto uniformBuffer = new RectUniformBuffer(graphicsContext, transformInfo);
   _rectUniforms.emplace_back(uniformBuffer);
 
-  auto descriptorSet = _descriptorPool->Allocate(_modelInfoSetLayout);
-  descriptorSet->UpdateUniform(0, uniformBuffer);
+  auto descriptorSet = _descriptorPool->allocate(*_modelInfoSetLayout);
+  descriptorSet->update_uniform(0, *uniformBuffer);
   _transformDescriptorSets.emplace_back(descriptorSet);
 
   auto transformDescriptorSets =
@@ -287,8 +286,8 @@ void DrawingContext::DrawRectangle(const Rect& rect, const Color& color) {
   }
 }
 
-void DrawingContext::DrawLine(const Point& start, const Point& end,
-                              const Color& color, float thickness) {
+void DrawingContext::draw_line(const Point& start, const Point& end,
+                               const Color& color, float thickness) {
   auto width = glm::length(end - start);
   auto rect = Rect{start, {width, thickness}};
 
@@ -296,12 +295,12 @@ void DrawingContext::DrawLine(const Point& start, const Point& end,
                                       .FillColor = color,
                                       .ModelSize = rect.Size};
 
-  DrawRectangle(roundRectInfo);
+  draw_rectangle(roundRectInfo);
 }
 
-void DrawingContext::DrawRectangle(const Rect& rect, const Size& radius,
-                                   const Color& fill, const Color& stroke,
-                                   float strokeThickness) {
+void DrawingContext::draw_rectangle(const Rect& rect, const Size& radius,
+                                    const Color& fill, const Color& stroke,
+                                    float strokeThickness) {
   auto roundRectInfo =
       _RoundRectInfo{.Model = ModelProjection(rect),
                      .FillColor = fill,
@@ -310,19 +309,19 @@ void DrawingContext::DrawRectangle(const Rect& rect, const Size& radius,
                      .CornerRadius = radius,
                      .StrokeThickness = glm::vec1(strokeThickness)};
 
-  DrawRectangle(roundRectInfo);
+  draw_rectangle(roundRectInfo);
 }
 
-void DrawingContext::DrawRectangle(const _RoundRectInfo& roundRectInfo) {
-  auto& graphicsContext = _renderSurface->GetGraphicsContext();
+void DrawingContext::draw_rectangle(const _RoundRectInfo& roundRectInfo) {
+  auto& graphicsContext = _renderSurface->context();
   auto& viewport = _renderSurface->GetViewport();
 
   auto uniformBuffer =
       new RoundRectUniformBuffer(graphicsContext, roundRectInfo);
   _roundRectUniforms.emplace_back(uniformBuffer);
 
-  auto descriptorSet = _descriptorPool->Allocate(_modelInfoSetLayout);
-  descriptorSet->UpdateUniform(0, uniformBuffer);
+  auto descriptorSet = _descriptorPool->allocate(*_modelInfoSetLayout);
+  descriptorSet->update_uniform(0, *uniformBuffer);
   _transformDescriptorSets.emplace_back(descriptorSet);
 
   auto transformDescriptorSets =
@@ -340,35 +339,36 @@ void DrawingContext::DrawRectangle(const _RoundRectInfo& roundRectInfo) {
   }
 }
 
-void DrawingContext::DrawCustom(DrawCustomCallback callback) {
+void DrawingContext::draw_custom(DrawCustomCallback callback) {
   for (auto& commandBuffer : _commandBuffers) callback(commandBuffer);
 }
 
 bool isControlChar(char16_t c) { return c <= 0x1F; }
 
-void DrawingContext::DrawFormattedText(const Point& point, FormattedText* text,
-                                       const Color& color) {
-  auto& font = text->GetFont();
+void DrawingContext::draw_formatted_text(const Point& point,
+                                         const FormattedText& text,
+                                         const Color& color) {
+  auto& font = text.font();
 
   auto p = glm::round(point);  // Keeps text pixel aligned
 
-  for (auto c : text->GetText()) {
+  for (auto c : text.text()) {
     if (!isControlChar(c)) {
-      auto& glyph = font->GetGlyph(c);
-      if (glyph.GetTexture()) DrawGlyph(p, glyph, color);
-      p.x += glyph.GetAdvance();
+      auto& glyph = font->glyph(c);
+      if (glyph.texture()) draw_glyph(p, glyph, color);
+      p.x += glyph.advance();
     } else {
       if (c == '\n') {
         p.x = point.x;  // TODO : Fix text pixel alignment on newline bug
-        p.y += font->GetLineHeight();
+        p.y += font->line_height();
       }
     }
   }
 }
 
-void DrawingContext::DrawGlyph(const Point& point, const Glyph& glyph,
-                               const Color& color) {
-  auto& graphicsContext = _renderSurface->GetGraphicsContext();
+void DrawingContext::draw_glyph(const Point& point, const Glyph& glyph,
+                                const Color& color) {
+  auto& graphicsContext = _renderSurface->context();
   auto& viewport = _renderSurface->GetViewport();
 
   auto p = glm::round(point);
@@ -382,12 +382,12 @@ void DrawingContext::DrawGlyph(const Point& point, const Glyph& glyph,
   auto uniformBuffer = new GlyphUniformBuffer(graphicsContext, glyphInfo);
   _glyphUniforms.emplace_back(uniformBuffer);
 
-  auto descriptorSet = _descriptorPool->Allocate(_modelInfoSetLayout);
-  descriptorSet->UpdateUniform(0, uniformBuffer);
+  auto descriptorSet = _descriptorPool->allocate(*_modelInfoSetLayout);
+  descriptorSet->update_uniform(0, *uniformBuffer);
   _transformDescriptorSets.emplace_back(descriptorSet);
 
-  auto samplerSet = _descriptorPool->Allocate(_glyphSetLayout);
-  samplerSet->UpdateSampler(0, glyph.GetTexture());
+  auto samplerSet = _descriptorPool->allocate(*_glyphSetLayout);
+  samplerSet->update_sampler(0, *glyph.texture());
   _glyphDescriptorSets.emplace_back(samplerSet);
 
   auto descriptorSets =
@@ -404,8 +404,8 @@ void DrawingContext::DrawGlyph(const Point& point, const Glyph& glyph,
   }
 }
 
-void DrawingContext::DrawBitmap(const Rect& rect, const Bitmap* bitmap) {
-  auto& graphicsContext = _renderSurface->GetGraphicsContext();
+void DrawingContext::draw_bitmap(const Rect& rect, const Bitmap& bitmap) {
+  auto& graphicsContext = _renderSurface->context();
 
   auto rectInfo =
       _RectangleInfo{.Model = ModelProjection(rect), .Color = Color::White};
@@ -413,12 +413,12 @@ void DrawingContext::DrawBitmap(const Rect& rect, const Bitmap* bitmap) {
   auto uniformBuffer = new RectUniformBuffer(graphicsContext, rectInfo);
   _rectUniforms.emplace_back(uniformBuffer);
 
-  auto descriptorSet = _descriptorPool->Allocate(_modelInfoSetLayout);
-  descriptorSet->UpdateUniform(0, uniformBuffer);
+  auto descriptorSet = _descriptorPool->allocate(*_modelInfoSetLayout);
+  descriptorSet->update_uniform(0, *uniformBuffer);
   _transformDescriptorSets.emplace_back(descriptorSet);
 
-  auto samplerSet = _descriptorPool->Allocate(_glyphSetLayout);
-  samplerSet->UpdateSampler(0, bitmap->GetTexture());
+  auto samplerSet = _descriptorPool->allocate(*_glyphSetLayout);
+  samplerSet->update_sampler(0, *bitmap.GetTexture());
   _glyphDescriptorSets.emplace_back(samplerSet);
 
   auto descriptorSets =
@@ -435,4 +435,4 @@ void DrawingContext::DrawBitmap(const Rect& rect, const Bitmap* bitmap) {
   }
 }
 
-}  // namespace xgdi
+}  // namespace muchcool::xgdi

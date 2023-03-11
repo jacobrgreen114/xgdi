@@ -6,24 +6,13 @@ message("Modules ${CMAKE_MODULE_PATH}")
 find_package(Ember MODULE REQUIRED)
 
 
-
-
-
-
-
-
-
-
-
-
-
-
 add_library(xgdi
-    src/XGDI.cpp
-    src/DrawingContext.cpp
-    src/Font.cpp
-    src/FormattedText.cpp
-    src/Bitmap.cpp
+        src/xgdi.cpp
+        src/datatypes.cpp
+        src/drawing_context.cpp
+        src/font.cpp
+        src/formatted_text.cpp
+        src/bitmap.cpp
 )
 
 target_shaders(xgdi
