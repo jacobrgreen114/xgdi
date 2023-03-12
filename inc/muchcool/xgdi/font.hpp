@@ -16,22 +16,26 @@ using CharCode = ft::CharCode;
 class Glyph : public rndr::GraphicsObject {
   Shared<rndr::Texture> _texture;
 
-  const FT_Glyph_Metrics metrics;
+  FT_Glyph_Metrics _metrics;
+
+  glm::vec2 _size;
+  glm::vec2 _bearing;
+  glm::vec2 _bitmap_size;
+  glm::vec2 _bitmap_baseline;
+  float _advance;
 
  public:
-  const glm::vec2 size;
-  const glm::vec2 bearing;
-  const glm::i32vec2 bitmap_baseline;
-  const float advance_;
-
-
   Glyph(Shared<rndr::GraphicsContext> context, ft::Glyph glyph);
-  Glyph(Glyph&&) = default;
+  Glyph(Glyph&&) = delete;
   Glyph(const Glyph&) = delete;
 
   auto& texture() const { return _texture; }
 
-  auto advance() const { return advance_; }
+  auto& size() const { return _size; }
+  auto& bearing() const { return _bearing; }
+  auto& bitmap_size() const { return _bitmap_size; }
+  auto& bitmap_baseline() const { return _bitmap_baseline; }
+  auto advance() const { return _advance; }
 };
 
 class Font : public rndr::GraphicsObject {

@@ -9,11 +9,12 @@ namespace muchcool::xgdi {
 
 Glyph::Glyph(Shared<rndr::GraphicsContext> context_, ft::Glyph glyph)
     : rndr::GraphicsObject(std::move(context_)),
-      metrics(glyph.metrics()),
-      size(metrics.width / 64.0f, metrics.height / 64.0f),
-      bearing(metrics.horiBearingX / 64.0f, metrics.horiBearingY / 64.0f),
-      bitmap_baseline{glyph.bitmap_left(), glyph.bitmap_top()},
-      advance_(metrics.horiAdvance / 64.0f) {
+      _metrics(glyph.metrics()),
+      _size(_metrics.width / 64.0f, _metrics.height / 64.0f),
+      _bearing(_metrics.horiBearingX / 64.0f, _metrics.horiBearingY / 64.0f),
+      _bitmap_size{glyph.bitmap().width, glyph.bitmap().rows},
+      _bitmap_baseline{glyph.bitmap_left(), glyph.bitmap_top()},
+      _advance(_metrics.horiAdvance / 64.0f) {
   const auto& bitmap = glyph.bitmap();
 
   if (bitmap.width > 0 && bitmap.rows > 0) {

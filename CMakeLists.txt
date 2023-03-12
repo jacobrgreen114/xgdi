@@ -54,3 +54,5 @@ target_precompile_headers(xgdi
         <muchcool/rndr.hpp>
         <freetype/freetype.hpp>
 )
+
+install(TARGETS xgdi)

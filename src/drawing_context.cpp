@@ -20,7 +20,9 @@
 #include "src/shader/glyph_sdf.vert.spv.hpp"
 #include "src/shader/glyph_sdf.frag.spv.hpp"
 
-#define MAX_DESCRIPTOR_COUNT 1024
+#define MAX_DESCRIPTOR_COUNT 4096
+
+#define XGDI_DRAW_GLYPH_BOUNDING_BOX false
 
 namespace muchcool::xgdi {
 
@@ -255,7 +257,7 @@ void DrawingContext::submit() const {
   device.resetFences(inFlightFence);
 }
 
-glm::mat4 ModelProjection(const Rect& rect, float rotation = 0.0f) {
+glm::mat4 model_projection(const Rect& rect, float rotation = 0.0f) {
   return glm::translate(glm::vec3(rect.Offset, 0.0f)) *
          glm::rotate(rotation, glm::vec3(0.0f, 0.0f, 1.0f)) *
          glm::scale(glm::vec3(rect.Size, 0.0f));
@@ -266,9 +268,10 @@ void DrawingContext::draw_rectangle(const Rect& rect, const Color& color) {
   auto& viewport = _renderSurface->GetViewport();
 
   auto transformInfo =
-      _RectangleInfo{.Model = ModelProjection(rect), .Color = color};
+      _RectangleInfo{.Model = model_projection(rect), .Color = color};
 
-  auto uniformBuffer = new RectUniformBuffer(graphicsContext, transformInfo);
+  auto uniformBuffer =
+      Shared{new RectUniformBuffer(graphicsContext, transformInfo)};
   _rectUniforms.emplace_back(uniformBuffer);
 
   auto descriptorSet = _descriptorPool->allocate(*_modelInfoSetLayout);
@@ -295,7 +298,7 @@ void DrawingContext::draw_line(const Point& start, const Point& end,
   auto width = glm::length(end - start);
   auto rect = Rect{start, {width, thickness}};
 
-  auto roundRectInfo = _RoundRectInfo{.Model = ModelProjection(rect),
+  auto roundRectInfo = _RoundRectInfo{.Model = model_projection(rect),
                                       .FillColor = color,
                                       .ModelSize = rect.Size};
 
@@ -306,7 +309,7 @@ void DrawingContext::draw_rectangle(const Rect& rect, const Size& radius,
                                     const Color& fill, const Color& stroke,
                                     float strokeThickness) {
   auto roundRectInfo =
-      _RoundRectInfo{.Model = ModelProjection(rect),
+      _RoundRectInfo{.Model = model_projection(rect),
                      .FillColor = fill,
                      .StrokeColor = stroke,
                      .ModelSize = rect.Size,
@@ -321,7 +324,7 @@ void DrawingContext::draw_rectangle(const _RoundRectInfo& roundRectInfo) {
   auto& viewport = _renderSurface->GetViewport();
 
   auto uniformBuffer =
-      new RoundRectUniformBuffer(graphicsContext, roundRectInfo);
+      Shared{new RoundRectUniformBuffer(graphicsContext, roundRectInfo)};
   _roundRectUniforms.emplace_back(uniformBuffer);
 
   auto descriptorSet = _descriptorPool->allocate(*_modelInfoSetLayout);
@@ -375,15 +378,28 @@ void DrawingContext::draw_glyph(const Point& point, const Glyph& glyph,
   auto& graphicsContext = _renderSurface->context();
   auto& viewport = _renderSurface->GetViewport();
 
-  auto p = glm::round(point);
+  auto bitmap_scale = glyph.bitmap_size() / glyph.size();
 
-  auto rect =
-      Rect{.Offset = Point{p.x + glyph.bearing.x, p.y - glyph.bearing.y},
-           .Size = {glyph.size.x, glyph.size.y}};
+  // todo : fix bitmap offset
+  auto bitmap_offset =
+      glyph.bitmap_baseline() * glyph.size() / glyph.bitmap_size();
 
-  auto glyphInfo = _GlyphInfo{.Model = ModelProjection(rect), .Color = color};
+  auto p = point;
+  auto off = glyph.bearing() * glm::vec2{1.0f, -1.0f};
 
-  auto uniformBuffer = new GlyphUniformBuffer(graphicsContext, glyphInfo);
+#if XGDI_DRAW_GLYPH_BOUNDING_BOX
+  auto bgrect = Rect{.Offset = p + off, .Size = glyph.size()};
+  draw_rectangle(bgrect, Color::Red);
+#endif
+
+  off.x += glyph.bitmap_baseline().x - off.x;
+  off.y -= glyph.bitmap_baseline().y + off.y;
+  auto rect = Rect{.Offset = p + off, .Size = glyph.size() * bitmap_scale};
+
+  auto glyphInfo = _GlyphInfo{.Model = model_projection(rect), .Color = color};
+
+  auto uniformBuffer =
+      Shared{new GlyphUniformBuffer(graphicsContext, glyphInfo)};
   _glyphUniforms.emplace_back(uniformBuffer);
 
   auto descriptorSet = _descriptorPool->allocate(*_modelInfoSetLayout);
@@ -412,9 +428,9 @@ void DrawingContext::draw_bitmap(const Rect& rect, const Bitmap& bitmap) {
   auto& graphicsContext = _renderSurface->context();
 
   auto rectInfo =
-      _RectangleInfo{.Model = ModelProjection(rect), .Color = Color::White};
+      _RectangleInfo{.Model = model_projection(rect), .Color = Color::White};
 
-  auto uniformBuffer = new RectUniformBuffer(graphicsContext, rectInfo);
+  auto uniformBuffer = Shared{new RectUniformBuffer(graphicsContext, rectInfo)};
   _rectUniforms.emplace_back(uniformBuffer);
 
   auto descriptorSet = _descriptorPool->allocate(*_modelInfoSetLayout);

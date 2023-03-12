@@ -18,9 +18,10 @@ layout(location = 0) out vec4 out_color;
 void main() {
     vec4 fill = modelInfo.FillColor;
     float d = texture(glyphSampler, in_uv).r;
-    float aaf = fwidth(d);
+    float aaf = fwidth(d) / 2;
 
     float alpha = smoothstep(0.5f - aaf, 0.5f + aaf, d);
+    //float alpha = step(0.5f, d);
 
     fill.a *= alpha;
 
