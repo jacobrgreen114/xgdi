@@ -11,11 +11,14 @@
 #include "src/shader/roundrect.vert.spv.hpp"
 #include "src/shader/roundrect.frag.spv.hpp"
 
+#include "src/shader/bitmap.vert.spv.hpp"
+#include "src/shader/bitmap.frag.spv.hpp"
+
 #include "src/shader/glyph.vert.spv.hpp"
 #include "src/shader/glyph.frag.spv.hpp"
 
-#include "src/shader/bitmap.vert.spv.hpp"
-#include "src/shader/bitmap.frag.spv.hpp"
+#include "src/shader/glyph_sdf.vert.spv.hpp"
+#include "src/shader/glyph_sdf.frag.spv.hpp"
 
 #define MAX_DESCRIPTOR_COUNT 1024
 
@@ -73,7 +76,8 @@ Shared<rndr::GraphicsPipeline> CreateRoundRectPipeline(
 Shared<rndr::GraphicsPipeline> CreateGlyphPipeline(
     Shared<rndr::RenderSurface> renderSurface,
     Shared<rndr::PipelineLayout> layout) {
-  return CreatePipeline(renderSurface, layout, glyph_vert_spv, glyph_frag_spv);
+  return CreatePipeline(renderSurface, layout, glyph_sdf_vert_spv,
+                        glyph_sdf_frag_spv);
 }
 
 Shared<rndr::GraphicsPipeline> CreateBitmapPipeline(

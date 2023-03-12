@@ -21,7 +21,9 @@ class Glyph : public rndr::GraphicsObject {
  public:
   const glm::vec2 size;
   const glm::vec2 bearing;
+  const glm::i32vec2 bitmap_baseline;
   const float advance_;
+
 
   Glyph(Shared<rndr::GraphicsContext> context, ft::Glyph glyph);
   Glyph(Glyph&&) = default;
@@ -67,13 +69,11 @@ class Font : public rndr::GraphicsObject {
 
   auto line_height() const { return _face.metrics().height / 64.0f; }
 
-  auto max_ascent() const { return _face.metrics().ascender / 64.0f; }
+  auto ascender() const { return _face.metrics().ascender / 64.0f; }
 
-  auto max_descent() const { return _face.metrics().descender / 64.0f; }
+  auto descender() const { return _face.metrics().descender / 64.0f; }
 
-  [[deprecated]] auto baseline_y() const {
-    return _face.metrics().ascender / 64.0f;
-  }
+  // auto baseline_y() const { return _face.metrics().ascender / 64.0f; }
 };
 
 }  // namespace muchcool::xgdi

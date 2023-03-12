@@ -12,13 +12,14 @@ Glyph::Glyph(Shared<rndr::GraphicsContext> context_, ft::Glyph glyph)
       metrics(glyph.metrics()),
       size(metrics.width / 64.0f, metrics.height / 64.0f),
       bearing(metrics.horiBearingX / 64.0f, metrics.horiBearingY / 64.0f),
+      bitmap_baseline{glyph.bitmap_left(), glyph.bitmap_top()},
       advance_(metrics.horiAdvance / 64.0f) {
   const auto& bitmap = glyph.bitmap();
 
   if (bitmap.width > 0 && bitmap.rows > 0) {
     _texture = new rndr::Texture(
         context(), bitmap.width, bitmap.rows, vk::Format::eR8Unorm,
-        bitmap.width * bitmap.rows, bitmap.buffer, vk::Filter::eNearest,
+        bitmap.width * bitmap.rows, bitmap.buffer, vk::Filter::eLinear,
         vk::SamplerAddressMode::eClampToBorder);
   }
 }
@@ -44,11 +45,10 @@ const Glyph& Font::glyph(CharCode code) {
 
   const auto glyphIndex = _face.get_char_index(code);
 
-  auto glyph = _face.load_glyph(glyphIndex);
-  // todo : switch font rendering to sdf
-  glyph.render(FT_Render_Mode::FT_RENDER_MODE_NORMAL);
+  auto glyph = _face.load_glyph(
+      glyphIndex, FT_LOAD_RENDER | FT_LOAD_TARGET_(FT_RENDER_MODE_SDF));
 
-  auto pair = _characterCache.try_emplace(code, context(), glyph);
+  auto pair = _characterCache.try_emplace(code, context(), std::move(glyph));
   if (!pair.second) {
     throw std::runtime_error{"Failed to cache glyph."};
   }
